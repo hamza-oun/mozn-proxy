@@ -1,34 +1,24 @@
 export default async function handler(req, res) {
-  const apiKey = process.env.API_KEY;
-  const origin = process.env.PROXY_ORIGIN || req.headers.origin || "";
+  const apiKey = process.env.API_KEY || process.env.FORESHADOW_API_KEY;
+  const origin = process.env.PROXY_ORIGIN || 'https://mozn-proxy.vercel.app';
 
-  if (!apiKey) {
-    return res.status(403).json({ error: "An API Key is required to make this request" });
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (!apiKey) return res.status(403).json({ error: "Missing API key in env" });
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const response = await fetch("https://api.4shadow.io/v1/forecast", {
+    const r = await fetch("https://api.4shadow.io/v1/forecast", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Api-Key": apiKey,
         "Origin": origin,
+        "Accept": "application/json"
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(req.body || {})
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(response.status).json({ error: errorText });
-    }
-
-    const data = await response.json();
-    return res.status(200).json(data);
-  } catch (err) {
-    return res.status(500).json({ error: "Proxy request failed", details: err.message });
+    const txt = await r.text();
+    res.status(r.status).setHeader("Content-Type","application/json").send(txt);
+  } catch (e) {
+    res.status(500).json({ error: "Proxy request failed", details: String(e?.message||e) });
   }
 }

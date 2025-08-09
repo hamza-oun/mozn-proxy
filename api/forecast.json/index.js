@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   const origin = process.env.PROXY_ORIGIN || 'https://mozn-proxy.vercel.app';
 
   if (!apiKey) {
-    return res.status(403).json({ error: 'An API Key is required to make this request (missing env)' });
+    return res.status(403).json({ error: 'An API Key is required to make this request' });
   }
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

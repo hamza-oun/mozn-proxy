@@ -1,18 +1,23 @@
-const BASE = process.env.UPSTREAM_BASE || 'https://api.4shadow.io/v1';
-const API_KEY = process.env.FORESHADOW_API_KEY || '';
-
 export default async function handler(req, res) {
+  const API_KEY = process.env.API_KEY;
+  const ORIGIN = process.env.PROXY_ORIGIN || 'https://mozn-proxy.vercel.app';
+  
+  // Build the URL for 4Shadow
+  const url = new URL('https://api.4shadow.io/v1/parameters');
+  
   try {
-    const url = new URL('/parameters', BASE);
-    if (API_KEY) url.searchParams.set('api-key', API_KEY);
+    const upstream = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Origin': ORIGIN, // Important for domain-locked keys
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {})
+      }
+    });
 
-    const upstream = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
-    const text = await upstream.text();
-
-    res.status(upstream.status)
-       .setHeader('Content-Type', 'application/json')
-       .send(text);
-  } catch (err) {
-    res.status(500).json({ error: 'Proxy error', details: err.message });
+    const data = await upstream.json();
+    res.status(upstream.status).json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Proxy request failed', details: error.message });
   }
 }

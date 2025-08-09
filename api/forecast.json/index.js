@@ -1,29 +1,29 @@
-// api/forecast.json/index.js
-const UPSTREAM = process.env.UPSTREAM_URL || 'https://foreshadow.parabl.io/api/forecast';
-const API_KEY = process.env.FORESHADOW_API_KEY || '2f04c9ea13d9529bf60694121a1012d7';
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Only POST requests are allowed' });
-  }
-  try {
-    // read raw body
-    const chunks = [];
-    for await (const c of req) chunks.push(c);
-    const raw = Buffer.concat(chunks).toString('utf8') || '{}';
+  const API_KEY = process.env.API_KEY;
+  const ORIGIN = process.env.PROXY_ORIGIN || 'https://mozn-proxy.vercel.app';
 
-    const upstream = await fetch(UPSTREAM, {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Only POST requests are allowed' });
+    return;
+  }
+
+  try {
+    const body = req.body;
+    const upstream = await fetch('https://api.4shadow.io/v1/forecast', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Origin': ORIGIN, // Important for domain-locked keys
         ...(API_KEY ? { 'x-api-key': API_KEY } : {})
       },
-      body: raw
+      body: JSON.stringify(body)
     });
 
-    const text = await upstream.text();
-    res.status(upstream.status).setHeader('Content-Type', 'application/json').send(text);
-  } catch (err) {
-    res.status(500).json({ error: 'Proxy error', details: String(err?.message || err) });
+    const data = await upstream.json();
+    res.status(upstream.status).json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Proxy request failed', details: error.message });
   }
 }
+
